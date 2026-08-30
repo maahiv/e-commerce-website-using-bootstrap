@@ -1,7 +1,11 @@
 import { useState } from "react";
+import { Routes, Route } from "react-router-dom";
+
 import Header from "./components/Header";
 import ProductList from "./components/ProductList";
 import Cart from "./components/Cart";
+import About from "./components/About";
+
 import { CartProvider } from "./Context/CartContext";
 
 function App() {
@@ -13,13 +17,16 @@ function App() {
 
   return (
     <CartProvider>
-      <div className="App">
-        <Header onCartClick={handleCartClick} />
+      <Header onCartClick={handleCartClick} />
 
-        {!showCart && <ProductList />}
+      <Routes>
+        <Route
+          path="/"
+          element={showCart ? <Cart /> : <ProductList />}
+        />
 
-        {showCart && <Cart />}
-      </div>
+        <Route path="/about" element={<About />} />
+      </Routes>
     </CartProvider>
   );
 }
