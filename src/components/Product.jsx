@@ -1,24 +1,31 @@
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import { useContext } from "react";
+import { useHistory } from "react-router-dom";
 import CartContext from "../Context/CartContext";
 
-function Product({ title, price, imageUrl }) {
+function Product({ product }) {
   const { addToCart } = useContext(CartContext);
+  const history = useHistory();
 
-  const product = {
-    title,
-    price,
-    imageUrl,
+  const { id, title, price, images } = product;
+
+  const handleProductClick = () => {
+    history.push(`/product/${id}`);
   };
 
   return (
     <Card className="h-100">
       <Card.Img
         variant="top"
-        src={imageUrl}
+        src={images[0]}
         alt={title}
-        style={{ height: "250px", objectFit: "contain" }}
+        onClick={handleProductClick}
+        style={{
+          height: "250px",
+          objectFit: "contain",
+          cursor: "pointer",
+        }}
       />
 
       <Card.Body className="text-center">
