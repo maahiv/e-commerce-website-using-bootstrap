@@ -31,6 +31,13 @@ function Header() {
           >
             ABOUT
           </NavLink>
+
+          <NavLink
+            to="/contact-us"
+            className="text-white text-decoration-none mx-5"
+          >
+            CONTACT US
+          </NavLink>
         </div>
 
         {location.pathname === "/store" && (
