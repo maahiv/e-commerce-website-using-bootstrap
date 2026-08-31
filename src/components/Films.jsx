@@ -7,28 +7,29 @@ import {
 } from "react";
 import { Container, Card, Button, Spinner, Form } from "react-bootstrap";
 
+const DATABASE_URL =
+  "https://ecommerce-website-9c26e-default-rtdb.firebaseio.com/movies";
+
 function Films() {
   const [films, setFilms] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [isRetrying, setIsRetrying] = useState(false);
+  const [isAdding, setIsAdding] = useState(false);
+  const [error, setError] = useState(false);
 
   const [movie, setMovie] = useState({
     title: "",
-    episode_id: "",
-    opening_crawl: "",
-    director: "",
-    producer: "",
-    release_date: "",
+    openingText: "",
+    releaseDate: "",
   });
 
   const retryTimeout = useRef(null);
 
   const fetchFilms = useCallback(async () => {
     setIsLoading(true);
-    setIsRetrying(false);
+    setError(false);
 
     try {
-      const response = await fetch("https://swapi.info/api/films");
+      const response = await fetch(`${DATABASE_URL}.json`);
 
       if (!response.ok) {
         throw new Error("Something went wrong");
@@ -36,67 +37,143 @@ function Films() {
 
       const data = await response.json();
 
-      setFilms(data);
-      setIsLoading(false);
-      setIsRetrying(false);
-    } catch (error) {
-      setIsLoading(false);
-      setIsRetrying(true);
+      if (data) {
+        const loadedMovies = Object.entries(data).map(([id, movie]) => ({
+          id,
+          ...movie,
+        }));
 
-      retryTimeout.current = setTimeout(() => {
-        fetchFilms();
-      }, 5000);
+        setFilms(loadedMovies);
+      } else {
+        setFilms([]);
+      }
+    } catch (error) {
+      setError(true);
     }
+
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
     fetchFilms();
 
     return () => {
-      clearTimeout(retryTimeout.current);
+      if (retryTimeout.current) {
+        clearTimeout(retryTimeout.current);
+      }
     };
   }, [fetchFilms]);
 
-  const cancelRetry = () => {
-    clearTimeout(retryTimeout.current);
-    setIsRetrying(false);
-  };
-
-  const handleChange = (event) => {
+  const handleChange = useCallback((event) => {
     const { name, value } = event.target;
 
     setMovie((prevMovie) => ({
       ...prevMovie,
       [name]: value,
     }));
-  };
+  }, []);
 
-  const addMovieHandler = (event) => {
-    event.preventDefault();
+  const handleSubmit = useCallback(
+    async (event) => {
+      event.preventDefault();
 
-    const NewMovieObj = {
-      ...movie,
-    };
+      const NewMovieObj = {
+        title: movie.title,
+        openingText: movie.openingText,
+        releaseDate: movie.releaseDate,
+      };
 
-    console.log(NewMovieObj);
-  };
+      console.log(NewMovieObj);
 
-  const filmCards = useMemo(() => {
+      setIsAdding(true);
+
+      try {
+        const response = await fetch(`${DATABASE_URL}.json`, {
+          method: "POST",
+          body: JSON.stringify(NewMovieObj),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Could not add movie");
+        }
+
+        const data = await response.json();
+
+        setFilms((prevFilms) => [
+          ...prevFilms,
+          {
+            id: data.name,
+            ...NewMovieObj,
+          },
+        ]);
+
+        setMovie({
+          title: "",
+          openingText: "",
+          releaseDate: "",
+        });
+      } catch (error) {
+        console.log(error);
+      }
+
+      setIsAdding(false);
+    },
+    [movie]
+  );
+
+  const deleteMovie = useCallback(async (id) => {
+    try {
+      const response = await fetch(`${DATABASE_URL}/${id}.json`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        throw new Error("Could not delete movie");
+      }
+
+      setFilms((prevFilms) =>
+        prevFilms.filter((film) => film.id !== id)
+      );
+    } catch (error) {
+      console.log(error);
+    }
+  }, []);
+
+  const movieList = useMemo(() => {
     return films.map((film) => (
-      <Card className="mb-3" key={film.episode_id}>
+      <Card className="mb-3" key={film.id}>
         <Card.Body>
           <Card.Title>{film.title}</Card.Title>
-          <Card.Text>Episode: {film.episode_id}</Card.Text>
+
+          <Card.Text>{film.openingText}</Card.Text>
+
+          <Card.Text>
+            Release Date: {film.releaseDate}
+          </Card.Text>
+
+          <Button
+            variant="danger"
+            onClick={() => deleteMovie(film.id)}
+          >
+            Delete Movie
+          </Button>
         </Card.Body>
       </Card>
     ));
-  }, [films]);
+  }, [films, deleteMovie]);
 
   return (
     <Container className="py-5">
-      <h1 className="text-center mb-4">Star Wars Films</h1>
+      <h1 className="text-center mb-4">Movies</h1>
 
-      <Form onSubmit={addMovieHandler} className="mb-5">
+      <Form
+        onSubmit={handleSubmit}
+        className="mx-auto mb-4"
+        style={{ maxWidth: "600px" }}
+      >
         <Form.Group className="mb-3">
           <Form.Label>Title</Form.Label>
           <Form.Control
@@ -104,66 +181,38 @@ function Films() {
             name="title"
             value={movie.title}
             onChange={handleChange}
-            placeholder="Enter movie title"
+            required
           />
         </Form.Group>
 
         <Form.Group className="mb-3">
-          <Form.Label>Episode ID</Form.Label>
-          <Form.Control
-            type="number"
-            name="episode_id"
-            value={movie.episode_id}
-            onChange={handleChange}
-            placeholder="Enter episode ID"
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Opening Crawl</Form.Label>
+          <Form.Label>Opening Text</Form.Label>
           <Form.Control
             as="textarea"
             rows={3}
-            name="opening_crawl"
-            value={movie.opening_crawl}
+            name="openingText"
+            value={movie.openingText}
             onChange={handleChange}
-            placeholder="Enter opening crawl"
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Director</Form.Label>
-          <Form.Control
-            type="text"
-            name="director"
-            value={movie.director}
-            onChange={handleChange}
-            placeholder="Enter director"
-          />
-        </Form.Group>
-
-        <Form.Group className="mb-3">
-          <Form.Label>Producer</Form.Label>
-          <Form.Control
-            type="text"
-            name="producer"
-            value={movie.producer}
-            onChange={handleChange}
-            placeholder="Enter producer"
+            required
           />
         </Form.Group>
 
         <Form.Group className="mb-3">
           <Form.Label>Release Date</Form.Label>
           <Form.Control
-            type="date"
-            name="release_date"
-            value={movie.release_date}
+            type="text"
+            name="releaseDate"
+            value={movie.releaseDate}
             onChange={handleChange}
+            required
           />
         </Form.Group>
 
-        <Button type="submit">Add Movie</Button>
+        <div className="text-center">
+          <Button type="submit" disabled={isAdding}>
+            {isAdding ? "Adding..." : "Add Movie"}
+          </Button>
+        </div>
       </Form>
 
       {isLoading && (
@@ -172,17 +221,15 @@ function Films() {
         </div>
       )}
 
-      {isRetrying && (
-        <div className="text-center mb-4">
-          <p>Something went wrong ....Retrying</p>
+      {error && (
+        <div className="text-center">
+          <h4 className="text-danger">Something went wrong</h4>
 
-          <Button variant="danger" onClick={cancelRetry}>
-            Cancel
-          </Button>
+          <Button onClick={fetchFilms}>Retry</Button>
         </div>
       )}
 
-      {!isLoading && !isRetrying && filmCards}
+      {!isLoading && !error && movieList}
     </Container>
   );
 }
