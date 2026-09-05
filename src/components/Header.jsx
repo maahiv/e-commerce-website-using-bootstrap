@@ -1,3 +1,4 @@
+
 import { useContext } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import Button from "react-bootstrap/Button";
@@ -11,6 +12,7 @@ function Header() {
     <nav style={{ backgroundColor: "black" }}>
       <div className="container position-relative">
         <div className="text-center py-2">
+
           <NavLink
             to="/"
             className="text-white text-decoration-none mx-5"
@@ -33,11 +35,19 @@ function Header() {
           </NavLink>
 
           <NavLink
+            to="/login"
+            className="text-white text-decoration-none mx-5"
+          >
+            LOGIN
+          </NavLink>
+
+          <NavLink
             to="/contact-us"
             className="text-white text-decoration-none mx-5"
           >
             CONTACT US
           </NavLink>
+
         </div>
 
         {location.pathname === "/store" && (
@@ -56,3 +66,4 @@ function Header() {
 }
 
 export default Header;
+
